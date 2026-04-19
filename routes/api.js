@@ -1,4 +1,5 @@
 import express from 'express';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient.js';
 const router = express.Router();
 
@@ -17,8 +18,13 @@ const requireAdmin = async (req, res, next) => {
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) return res.status(401).json({ error: 'Invalid token' });
   
-  const { data: userData } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
-  if (!userData?.is_admin) return res.status(403).json({ error: 'Không có quyền Admin!' });
+  // Create a scoped client with the user's JWT to bypass RLS
+  const scopedClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '', {
+    global: { headers: { Authorization: `Bearer ${token}` } }
+  });
+  
+  const { data: userData } = await scopedClient.from('users').select('is_admin').eq('id', user.id).single();
+  if (!userData?.is_admin) return res.status(403).json({ error: 'Lỗi: Không có quyền Admin trên cơ sở dữ liệu!' });
   
   req.adminId = user.id;
   next();
