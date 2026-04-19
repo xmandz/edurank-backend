@@ -27,6 +27,7 @@ const requireAdmin = async (req, res, next) => {
   if (!userData?.is_admin) return res.status(403).json({ error: 'Lỗi: Không có quyền Admin trên cơ sở dữ liệu!' });
   
   req.adminId = user.id;
+  req.supabase = scopedClient;
   next();
 };
 
@@ -168,21 +169,21 @@ router.post('/admin/questions', requireAdmin, async (req, res) => {
     }
   }
 
-  const { data, error } = await supabase.from('questions').insert(toInsert).select();
+  const { data, error } = await req.supabase.from('questions').insert(toInsert).select();
   if (error) return res.status(500).json({ error: error.message });
 
   res.json({ message: `Đã thêm ${data.length} câu hỏi!`, count: data.length, data });
 });
 
 router.get('/admin/questions', requireAdmin, async (req, res) => {
-  const { data, error } = await supabase.from('questions').select('*').order('created_at', { ascending: false });
+  const { data, error } = await req.supabase.from('questions').select('*').order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 router.delete('/admin/questions/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { error } = await supabase.from('questions').delete().eq('id', id);
+  const { error } = await req.supabase.from('questions').delete().eq('id', id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ message: 'Đã xóa câu hỏi' });
 });
