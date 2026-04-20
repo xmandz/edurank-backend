@@ -72,7 +72,7 @@ router.post('/results/pve', requireAuth, async (req, res) => {
 
   const { data: user, error: fetchError } = await supabase
     .from('users')
-    .select('coins, streak_days, last_active_date')
+    .select('coins, streak_days, last_active_date, rating')
     .eq('id', user_id)
     .single();
 
@@ -99,10 +99,14 @@ router.post('/results/pve', requireAuth, async (req, res) => {
   const totalEarned = earnedCoins + streakBonus;
   const newCoins = (user.coins || 0) + totalEarned;
 
+  const ratingGain = correct_count * 5;
+  const newRating = (user.rating || 1000) + ratingGain;
+
   const { error: updateError } = await supabase
     .from('users')
     .update({
       coins: newCoins,
+      rating: newRating,
       streak_days: newStreak,
       last_active_date: today
     })
@@ -110,7 +114,7 @@ router.post('/results/pve', requireAuth, async (req, res) => {
 
   if (updateError) return res.status(500).json({ error: updateError.message });
 
-  res.json({ message: 'Success', earnedCoins: totalEarned, streakBonus, newCoins, newStreak });
+  res.json({ message: 'Success', earnedCoins: totalEarned, streakBonus, newCoins, newStreak, newRating, ratingGain });
 });
 
 router.post('/streak/checkin', requireAuth, async (req, res) => {
